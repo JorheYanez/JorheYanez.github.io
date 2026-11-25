@@ -364,6 +364,13 @@
   /* ---------- pricing & plans ---------- */
   const proPrice = (cycle) => (cycle === "annual" ? PLANS.pro.annual : PLANS.pro.monthly);
   const perLabel = (cycle) => (cycle === "annual" ? "/year" : "/month");
+  /* Annual savings, worked out from the prices so they stay right if prices change. */
+  const savePct = () => Math.round((1 - PLANS.pro.annual / (PLANS.pro.monthly * 12)) * 100);
+  const monthsFree = () => Math.round((PLANS.pro.monthly * 12 - PLANS.pro.annual) / PLANS.pro.monthly);
+  /* One free trial per visitor. */
+  const trialAvailable = () => !db.usedTrial && PLANS.pro.trialDays > 0;
+  const addDays = (iso, n) => new Date(new Date(iso).getTime() + n * 864e5).toISOString();
+  const inTrial = (b) => b && b.trialEnds && new Date(b.trialEnds) > new Date();
   function renderPricing() {
     $$(".cycle-btn").forEach((b) => {
       const on = b.dataset.cycle === ui.cycle;
@@ -373,6 +380,8 @@
       `<li class="${f.endsWith(":") ? "lead" : ""}">${f.endsWith(":") && i === 0 ? "" : '<span class="ck">✓</span>'}${esc(f)}</li>`).join("")}</ul>`;
     const pro = PLANS.pro, free = PLANS.free;
     const monthlyEquiv = (pro.annual / 12).toFixed(2);
+    $("#savePct").textContent = `Save ${savePct()}%`;
+    const cta = trialAvailable() ? `Start ${pro.trialDays}-day free trial` : "Upgrade to Pro";
     $("#plans").innerHTML = `
       <div class="plan ${!isPro() ? "current" : ""}">
         <div class="plan-name">${free.name}</div>
@@ -382,12 +391,13 @@
         ${feats(free.features)}
       </div>
       <div class="plan featured ${isPro() ? "current" : ""}">
-        <div class="ribbon">Most popular</div>
+        <div class="ribbon">Launch price</div>
         <div class="plan-name">${pro.name}</div>
         <div class="muted">${esc(pro.tagline)}</div>
         <div class="price"><b>${money(proPrice(ui.cycle))}</b><span>${perLabel(ui.cycle)}</span></div>
-        <div class="muted small-note">${ui.cycle === "annual" ? `That's $${monthlyEquiv}/month, billed yearly` : `Or ${money(pro.annual)}/year — 2 months free`}</div>
-        ${isPro() ? '<button class="btn primary" data-manage>Manage plan</button>' : '<button class="btn primary" data-upgrade="">Upgrade to Pro</button>'}
+        <div class="muted small-note">${ui.cycle === "annual" ? `That's $${monthlyEquiv}/month, billed yearly` : `Or ${money(pro.annual)}/year — ${monthsFree()} months free`}</div>
+        ${isPro() ? '<button class="btn primary" data-manage>Manage plan</button>' : `<button class="btn primary" data-upgrade="">${cta}</button>`}
+        ${!isPro() && trialAvailable() ? `<div class="muted small-note">No charge for ${pro.trialDays} days · cancel any time</div>` : ""}
         ${feats(pro.features)}
       </div>`;
     const rows = [
@@ -412,7 +422,10 @@
     if (isPro()) return openManage();
     let cycle = ui.cycle;
     const body = $("#checkoutBody");
+    const trial = trialAvailable();
+    const days = PLANS.pro.trialDays;
     const paint = () => {
+      const firstCharge = fmtDate(addDays(new Date().toISOString(), days));
       body.innerHTML = `
         <button class="x close" data-close aria-label="Close">×</button>
         <div class="plan-name">Upgrade to BuildCircle Pro</div>
@@ -420,24 +433,27 @@
         <div class="cycle-pick" role="radiogroup" aria-label="Billing cycle">
           ${["monthly", "annual"].map((c) => `<label class="cycle-opt ${cycle === c ? "on" : ""}">
             <input type="radio" name="cyc" value="${c}" ${cycle === c ? "checked" : ""}>
-            <span><b>${c === "annual" ? "Annual" : "Monthly"}</b><br><span class="muted">${money(proPrice(c))}${perLabel(c)}${c === "annual" ? " · save 17%" : ""}</span></span>
+            <span><b>${c === "annual" ? "Annual" : "Monthly"}</b><br><span class="muted">${money(proPrice(c))}${perLabel(c)}${c === "annual" ? ` · save ${savePct()}%` : ""}</span></span>
           </label>`).join("")}
         </div>
         <ul class="feats">${PLANS.pro.features.slice(1).map((f) => `<li><span class="ck">✓</span>${esc(f)}</li>`).join("")}</ul>
-        <div class="summary"><span>Due today</span><b>${money(proPrice(cycle))}</b></div>
+        <div class="summary"><span>Due today</span><b>${trial ? "$0" : money(proPrice(cycle))}</b></div>
+        ${trial ? `<p class="muted then">Then ${money(proPrice(cycle))}${perLabel(cycle)} starting ${firstCharge}. Cancel before then and you won't be charged.</p>` : ""}
         <p class="demo-note">Demo checkout — no payment is collected and no card is needed. Cancel any time from <i>Manage plan</i>.</p>
         <div class="dlg-actions">
           <button class="btn ghost" data-close>Not now</button>
-          <button class="btn primary" id="confirmPro">Start Pro</button>
+          <button class="btn primary" id="confirmPro">${trial ? `Start ${days}-day free trial` : "Start Pro"}</button>
         </div>`;
       $$("input[name=cyc]", body).forEach((r) => r.addEventListener("change", () => { cycle = r.value; paint(); }));
       $("#confirmPro", body).addEventListener("click", () => {
+        const now = new Date().toISOString();
         db.plan = "pro";
-        db.billing = { cycle, since: new Date().toISOString(), price: proPrice(cycle) };
+        db.billing = { cycle, since: now, price: proPrice(cycle), trialEnds: trial ? addDays(now, days) : null };
+        if (trial) db.usedTrial = true;
         save();
         $("#checkoutDlg").close();
         afterPlanChange();
-        toast("Welcome to Pro! Reviews, contact info and license details are unlocked.");
+        toast(trial ? `Your ${days}-day Pro trial has started. Everything is unlocked.` : "Welcome to Pro! Reviews, contact info and license details are unlocked.");
       });
     };
     paint();
@@ -445,8 +461,9 @@
     if (!dlg.open) dlg.showModal();
   }
 
+  /* Next charge: the end of the trial, then every month or year after it. */
   function renewalDate(b) {
-    const d = new Date(b.since);
+    const d = new Date(b.trialEnds || b.since);
     const now = new Date();
     while (d <= now) b.cycle === "annual" ? d.setFullYear(d.getFullYear() + 1) : d.setMonth(d.getMonth() + 1);
     return d.toISOString();
@@ -459,8 +476,11 @@
       <div class="plan-name">Your plan: Pro <span class="badge pro">PRO</span></div>
       <div class="manage-grid">
         <div><span class="muted">Billing</span><b>${money(proPrice(b.cycle))}${perLabel(b.cycle)}</b></div>
-        <div><span class="muted">Member since</span><b>${fmtDate(b.since)}</b></div>
-        <div><span class="muted">Renews</span><b>${fmtDate(renewalDate(b))}</b></div>
+        ${inTrial(b)
+          ? `<div><span class="muted">Free trial ends</span><b>${fmtDate(b.trialEnds)}</b></div>
+             <div><span class="muted">First charge</span><b>${fmtDate(b.trialEnds)}</b></div>`
+          : `<div><span class="muted">Member since</span><b>${fmtDate(b.since)}</b></div>
+             <div><span class="muted">Renews</span><b>${fmtDate(renewalDate(b))}</b></div>`}
       </div>
       <p class="demo-note">Demo billing — nothing is charged.</p>
       <div class="dlg-actions">

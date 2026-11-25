@@ -231,3 +231,4 @@ legend { font-weight: 700; font-size: .9rem; padding: 0 4px; }
   .cycle-pick, .manage-grid { grid-template-columns: 1fr; }
   #meLabel { display: none; }
 }
+.then { margin: -4px 0 0; font-size: .85rem; }

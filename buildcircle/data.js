@@ -158,7 +158,11 @@ window.BC_SEED = (function () {
   return { pros, reviews };
 })();
 
-/* Membership plans. Prices are placeholders; no payment is processed in this demo. */
+/* Membership plans. No payment is processed in this demo.
+   Launch pricing: kept deliberately low to remove friction while testing demand.
+   Comparable tools aimed at pros run $60-$400/month (LinkedIn Premium Business,
+   Houzz Pro), while consumer-side directory memberships run ~$30/year (Angi Key),
+   so Pro starts near the bottom of that range with a free trial. */
 window.BC_PLANS = {
   free: {
     name: "Free",
@@ -175,8 +179,9 @@ window.BC_PLANS = {
   pro: {
     name: "Pro",
     tagline: "Hire and partner with confidence",
-    monthly: 19,
-    annual: 190,
+    monthly: 9.99,
+    annual: 99,
+    trialDays: 14,
     features: [
       "Everything in Free, plus:",
       "Read every review of other businesses",
