@@ -170,7 +170,7 @@
   function renderNetwork() {
     const list = db.network.map(proById).filter(Boolean);
     $("#netCount").textContent = list.length;
-    $("#networkGrid").innerHTML = list.length ? list.map(cardHTML).join("") : '<div class="empty">You haven\'t connected with anyone yet. Browse the directory and hit “Connect”.</div>';
+    $("#networkGrid").innerHTML = list.length ? list.map(cardHTML).join("") : '<div class="empty">You haven\'t connected with anyone yet. Head to Discover and hit “Connect” to start building your circle.</div>';
   }
 
   /* ---------- feed ---------- */
@@ -401,7 +401,7 @@
         ${feats(pro.features)}
       </div>`;
     const rows = [
-      ["Browse the directory", true, true],
+      ["Discover and browse professional profiles", true, true],
       ["Filter by category, specialty, experience & rating", true, true],
       ["Star ratings & review counts", true, true],
       ["Create a profile, connect & write reviews", true, true],
@@ -428,7 +428,7 @@
       const firstCharge = fmtDate(addDays(new Date().toISOString(), days));
       body.innerHTML = `
         <button class="x close" data-close aria-label="Close">×</button>
-        <div class="plan-name">Upgrade to BuildCircle Pro</div>
+        <div class="plan-name">Upgrade to Buildcircle Pro</div>
         ${reason ? `<p class="reason">${LOCK} ${esc(reason)} is a Pro feature.</p>` : ""}
         <div class="cycle-pick" role="radiogroup" aria-label="Billing cycle">
           ${["monthly", "annual"].map((c) => `<label class="cycle-opt ${cycle === c ? "on" : ""}">
@@ -534,7 +534,7 @@
     badge.classList.toggle("is-pro", isPro());
     $$("[data-pro-only]").forEach((el) => el.classList.toggle("hidden", isPro()));
     $("#meLabel").textContent = me() ? "Signed in as " + me().name : "";
-    $("#joinBtn").textContent = me() ? "My profile" : "Join as a pro";
+    $("#joinBtn").textContent = me() ? "My profile" : "Join Buildcircle";
   }
 
   /* ---------- events ---------- */
