@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BuildCircle</title>
+<meta name="description" content="A social network connecting contractors, architects and engineers — browse by category, licenses and experience, and read or leave reviews.">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <a class="brand" href="#" data-view="browse">
+      <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="3"/><path d="M9 20 L16 9 L23 20 Z" fill="currentColor"/></svg>
+      BuildCircle
+    </a>
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-view="browse">Directory</button>
+      <button class="tab" data-view="feed">Activity</button>
+      <button class="tab" data-view="network">My network <span id="netCount" class="pill">0</span></button>
+    </nav>
+    <div class="me">
+      <span id="meLabel" class="muted"></span>
+      <button class="btn primary" id="joinBtn">Join as a pro</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- DIRECTORY -->
+  <section id="view-browse" class="view">
+    <div class="hero">
+      <h1>Find the right builder, designer or engineer.</h1>
+      <p class="muted">Verified licenses, real experience, and reviews from people who worked with them.</p>
+      <div class="search">
+        <input id="q" type="search" placeholder="Search name, specialty, city, license #…" aria-label="Search">
+      </div>
+      <div class="cats" id="catChips"></div>
+    </div>
+
+    <div class="layout">
+      <aside class="filters" aria-label="Filters">
+        <h3>Filters</h3>
+        <label>Specialty
+          <select id="fSub"><option value="">Any</option></select>
+        </label>
+        <label>License state
+          <select id="fState"><option value="">Any</option></select>
+        </label>
+        <label>License type
+          <select id="fLicType"><option value="">Any</option></select>
+        </label>
+        <label><span>Min. experience: <b id="fExpVal">0</b> yrs</span>
+          <input id="fExp" type="range" min="0" max="40" step="1" value="0">
+        </label>
+        <label>Min. rating
+          <select id="fRating">
+            <option value="0">Any</option><option value="3">3★ +</option><option value="4">4★ +</option><option value="4.5">4.5★ +</option>
+          </select>
+        </label>
+        <label class="check"><input id="fVerified" type="checkbox"> Verified license only</label>
+        <label class="check"><input id="fAvail" type="checkbox"> Accepting new projects</label>
+        <button class="btn ghost small" id="clearFilters">Clear filters</button>
+      </aside>
+
+      <div class="results">
+        <div class="results-bar">
+          <span id="count" class="muted"></span>
+          <label class="sort">Sort by
+            <select id="sort">
+              <option value="rating">Top rated</option>
+              <option value="reviews">Most reviewed</option>
+              <option value="experience">Most experienced</option>
+              <option value="connections">Most connected</option>
+              <option value="name">Name A–Z</option>
+            </select>
+          </label>
+        </div>
+        <div id="grid" class="grid"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEED -->
+  <section id="view-feed" class="view hidden">
+    <h2>Recent activity</h2>
+    <div id="feed" class="feed"></div>
+  </section>
+
+  <!-- NETWORK -->
+  <section id="view-network" class="view hidden">
+    <h2>My network</h2>
+    <p class="muted">Pros you've connected with. Connect from any profile.</p>
+    <div id="networkGrid" class="grid"></div>
+  </section>
+</main>
+
+<!-- PROFILE DIALOG -->
+<dialog id="profileDlg" class="dlg wide">
+  <div id="profileBody"></div>
+</dialog>
+
+<!-- JOIN DIALOG -->
+<dialog id="joinDlg" class="dlg">
+  <form id="joinForm" method="dialog">
+    <h2>Create your pro profile</h2>
+    <div class="row2">
+      <label>Full name / company<input name="name" required maxlength="60"></label>
+      <label>City, State<input name="location" required maxlength="60" placeholder="Austin, TX"></label>
+    </div>
+    <div class="row2">
+      <label>Category
+        <select name="category" id="jCat" required></select>
+      </label>
+      <label>Specialty
+        <select name="sub" id="jSub" required></select>
+      </label>
+    </div>
+    <div class="row2">
+      <label>Years of experience<input name="years" type="number" min="0" max="70" required value="5"></label>
+      <label>Hourly rate (USD, optional)<input name="rate" type="number" min="0" max="2000"></label>
+    </div>
+    <label>Headline<input name="headline" maxlength="90" placeholder="Licensed GC specializing in custom homes"></label>
+    <label>About<textarea name="bio" rows="3" maxlength="600"></textarea></label>
+    <label>Skills / tags (comma separated)<input name="tags" maxlength="200" placeholder="LEED, Revit, Seismic retrofit"></label>
+
+    <fieldset>
+      <legend>Licenses & certifications</legend>
+      <div id="licRows"></div>
+      <button type="button" class="btn ghost small" id="addLic">+ Add license</button>
+    </fieldset>
+    <label class="check"><input name="available" type="checkbox" checked> Accepting new projects</label>
+
+    <div class="dlg-actions">
+      <button type="button" class="btn ghost" data-close>Cancel</button>
+      <button type="submit" class="btn primary" value="ok">Publish profile</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<footer class="wrap foot muted">
+  Demo app — data is stored in your browser. <button class="linkbtn" id="resetData">Reset demo data</button>
+</footer>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
