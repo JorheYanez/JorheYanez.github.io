@@ -1,4 +1,4 @@
-/* Taxonomy + seed data for BuildCircle (all people below are fictional). */
+/* Taxonomy + seed data for Buildcircle (all people below are fictional). */
 window.BC_CATEGORIES = {
   Contractor: {
     color: "var(--contractor)",
@@ -166,7 +166,7 @@ window.BC_SEED = (function () {
 window.BC_PLANS = {
   free: {
     name: "Free",
-    tagline: "Find and connect with pros",
+    tagline: "Build your professional network",
     features: [
       "Browse the full directory",
       "Filter by category, specialty, experience & rating",
