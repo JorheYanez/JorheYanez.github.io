@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BuildCircle | The social network for people who build</title>
+<meta name="description" content="BuildCircle is the social network for architects, engineers and contractors. Share your work, resume, licenses and experience in one verified profile, and find the right partners faster.">
+<style>
+:root {
+  --bg: #f6f5f2; --surface: #ffffff; --surface-2: #f0eee9; --text: #1d1f22; --muted: #5f636a;
+  --border: #e2dfd8; --accent: #d9622b; --accent-ink: #ffffff;
+  --contractor: #d9622b; --architect: #2d6cdf; --engineer: #1f9d72; --ok: #1f9d72; --star: #f2a516;
+  --radius: 14px; --shadow: 0 1px 2px rgba(0,0,0,.05), 0 8px 28px rgba(0,0,0,.07);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #131416; --surface: #1c1e21; --surface-2: #25282c; --text: #ecedee; --muted: #a0a6ae;
+    --border: #31353a; --accent: #ec7a45; --contractor: #ec7a45; --architect: #5b8ff0; --engineer: #3cc18f;
+    --ok: #3cc18f; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 28px rgba(0,0,0,.25);
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+html, body { margin: 0; }
+body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+h1, h2, h3 { line-height: 1.15; margin: 0 0 .5rem; }
+p { margin: 0 0 1rem; }
+a { color: var(--accent); }
+.muted { color: var(--muted); }
+button, input, select { font: inherit; color: inherit; }
+
+/* nav */
+.nav { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); }
+.nav-inner { display: flex; align-items: center; gap: 16px; height: 62px; }
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 1.2rem; color: var(--text); text-decoration: none; letter-spacing: -.01em; }
+.brand svg { color: var(--accent); }
+.nav-links { display: flex; gap: 20px; margin-left: auto; align-items: center; }
+.nav-links a { color: var(--muted); text-decoration: none; font-weight: 600; font-size: .95rem; }
+.nav-links a:hover { color: var(--text); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--border); background: var(--surface); padding: 10px 16px; border-radius: 10px; cursor: pointer; font-weight: 700; text-decoration: none; color: var(--text); }
+.btn:hover { background: var(--surface-2); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover { filter: brightness(1.06); }
+.nav .btn { padding: 8px 14px; }
+
+/* hero */
+.hero { padding: 64px 0 56px; display: grid; grid-template-columns: 1.1fr .9fr; gap: 48px; align-items: center; }
+.eyebrow { display: inline-block; font-size: .8rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); padding: 4px 10px; border-radius: 99px; margin-bottom: 16px; }
+.hero h1 { font-size: clamp(2rem, 5vw, 3.2rem); letter-spacing: -.02em; }
+.hero h1 em { font-style: normal; color: var(--accent); }
+.lede { font-size: 1.15rem; color: var(--muted); max-width: 34em; }
+
+/* waitlist form */
+.waitlist { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); max-width: 520px; margin-top: 8px; }
+.waitlist .row { display: flex; gap: 8px; flex-wrap: wrap; }
+.waitlist input, .waitlist select { padding: 12px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); min-width: 0; }
+.waitlist input[type=email] { flex: 1 1 220px; }
+.waitlist select { flex: 1 1 160px; }
+.waitlist .btn { flex: 1 1 100%; padding: 12px 16px; margin-top: 2px; }
+.waitlist .fine { font-size: .82rem; color: var(--muted); margin: 10px 0 0; }
+.waitlist .err { color: #c0392b; font-size: .88rem; margin: 8px 0 0; display: none; }
+.waitlist.done .row, .waitlist.done .fine { display: none; }
+.thanks { display: none; text-align: left; }
+.waitlist.done .thanks { display: block; }
+.thanks h3 { display: flex; align-items: center; gap: 8px; }
+.thanks .check { width: 26px; height: 26px; border-radius: 50%; background: var(--ok); color: #fff; display: inline-grid; place-items: center; font-size: .9rem; }
+.thanks p { margin: 0; }
+.vh { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.hp { display: none; }
+
+/* mock profile */
+.mock { position: relative; }
+.pcard { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; border-top: 5px solid var(--architect); }
+.pcard-head { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; }
+.avatar { width: 52px; height: 52px; border-radius: 12px; display: grid; place-items: center; font-weight: 800; color: #fff; background: var(--architect); flex: none; }
+.pcard-head b { display: block; font-size: 1.05rem; }
+.tag { display: inline-block; font-size: .75rem; font-weight: 700; padding: 2px 8px; border-radius: 99px; background: var(--surface-2); color: var(--muted); }
+.tag.ok { background: color-mix(in srgb, var(--ok) 15%, transparent); color: var(--ok); }
+.thumbs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; }
+.thumbs div { aspect-ratio: 4/3; border-radius: 8px; background: linear-gradient(135deg, var(--surface-2), color-mix(in srgb, var(--architect) 22%, var(--surface-2))); position: relative; overflow: hidden; }
+.thumbs div::after { content: ""; position: absolute; inset: 30% 18% 0 18%; border: 2px solid color-mix(in srgb, var(--text) 20%, transparent); border-bottom: 0; border-radius: 4px 4px 0 0; }
+.pcard ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; font-size: .92rem; }
+.pcard li { display: flex; justify-content: space-between; gap: 10px; border-top: 1px dashed var(--border); padding-top: 8px; }
+.floating { position: absolute; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); padding: 10px 12px; font-size: .85rem; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.floating .dot { width: 10px; height: 10px; border-radius: 50%; }
+.f1 { left: -28px; bottom: -18px; }
+.f2 { right: -18px; top: -18px; }
+
+/* sections */
+section { padding: 56px 0; }
+.section-head { max-width: 640px; margin-bottom: 28px; }
+.section-head h2 { font-size: clamp(1.5rem, 3.4vw, 2.1rem); letter-spacing: -.01em; }
+.alt { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; border-top: 4px solid var(--c, var(--border)); }
+.alt .card { background: var(--bg); }
+section:not(.alt) .card { background: var(--surface); }
+.card h3 { font-size: 1.15rem; display: flex; align-items: center; gap: 8px; }
+.card ul { margin: 10px 0 0; padding-left: 18px; color: var(--muted); }
+.card li { margin-bottom: 4px; }
+.icon { width: 34px; height: 34px; border-radius: 9px; display: inline-grid; place-items: center; background: color-mix(in srgb, var(--c, var(--accent)) 15%, transparent); color: var(--c, var(--accent)); flex: none; }
+.steps { counter-reset: s; }
+.step { position: relative; padding-top: 52px; }
+.step::before { counter-increment: s; content: counter(s); position: absolute; top: 20px; left: 22px; width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font-weight: 800; font-size: .85rem; }
+.step p { color: var(--muted); margin: 0; }
+.feat { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px 28px; }
+.feat > div { display: flex; gap: 12px; align-items: flex-start; }
+.feat b { display: block; }
+.feat p { color: var(--muted); margin: 2px 0 0; font-size: .95rem; }
+
+/* preview + final cta */
+.preview { display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); }
+.preview p { margin: 0; color: var(--muted); max-width: 36em; }
+.cta { text-align: center; }
+.cta .waitlist { margin: 20px auto 0; text-align: left; }
+footer { border-top: 1px solid var(--border); padding: 24px 0 40px; font-size: .9rem; color: var(--muted); }
+footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+footer a { color: var(--muted); }
+
+@media (max-width: 880px) {
+  .hero { grid-template-columns: 1fr; padding-top: 40px; gap: 40px; }
+  .mock { max-width: 440px; margin: 0 auto; width: 100%; }
+  .f1 { left: 8px; bottom: -20px; } .f2 { right: 8px; }
+  .grid3 { grid-template-columns: 1fr; }
+  .feat { grid-template-columns: 1fr; }
+  .nav-links a:not(.btn) { display: none; }
+}
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="#top" aria-label="BuildCircle home">
+      <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="3"/><path d="M9 20 L16 9 L23 20 Z" fill="currentColor"/></svg>
+      BuildCircle
+    </a>
+    <nav class="nav-links" aria-label="Main">
+      <a href="#who">Who it's for</a>
+      <a href="#how">How it works</a>
+      <a href="buildcircle/">Preview</a>
+      <a class="btn primary" href="#join">Join the waitlist</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <div class="wrap hero">
+    <div>
+      <span class="eyebrow">Coming soon</span>
+      <h1>The social network for people who <em>build</em>.</h1>
+      <p class="lede">BuildCircle is where architects, engineers and contractors connect, share their work and grow their circle. Post your projects, resume, licenses and experience on a verified profile, follow the people you build with, and find your next partner without the phone tag.</p>
+      <form class="waitlist" id="join" novalidate>
+        <div class="row">
+          <label class="vh" for="email1">Email</label>
+          <input id="email1" name="email" type="email" placeholder="you@company.com" autocomplete="email" required>
+          <label class="vh" for="role1">I am a…</label>
+          <select id="role1" name="role" required>
+            <option value="" selected disabled>I am a…</option>
+            <option>Contractor</option>
+            <option>Subcontractor / trade</option>
+            <option>Architect</option>
+            <option>Engineer</option>
+            <option>Owner / developer</option>
+            <option>Other</option>
+          </select>
+          <input class="hp" name="company_url" tabindex="-1" autocomplete="off" aria-hidden="true">
+          <button class="btn primary" type="submit">Get early access</button>
+        </div>
+        <p class="err" role="alert"></p>
+        <p class="fine">Free to join. We'll only email you about the launch.</p>
+        <div class="thanks" aria-live="polite">
+          <h3><span class="check">✓</span> You're on the list.</h3>
+          <p class="muted">We'll email you when BuildCircle opens in your area. In the meantime, <a href="buildcircle/">take a look at the preview</a>.</p>
+        </div>
+      </form>
+    </div>
+
+    <div class="mock" aria-hidden="true">
+      <div class="pcard">
+        <div class="pcard-head">
+          <div class="avatar">MR</div>
+          <div>
+            <b>Maya Reyes, AIA</b>
+            <span class="muted" style="font-size:.9rem">Architect · Austin, TX</span>
+          </div>
+          <span class="tag ok" style="margin-left:auto">✓ Licensed</span>
+        </div>
+        <div class="thumbs"><div></div><div></div><div></div></div>
+        <ul>
+          <li><span class="muted">Experience</span><b>14 years</b></li>
+          <li><span class="muted">License</span><b>TX Architect · Active</b></li>
+          <li><span class="muted">Recent work</span><b>Mixed-use, 4 stories</b></li>
+          <li><span class="muted">Rating</span><b><span style="color:var(--star)">★★★★★</span> 4.9</b></li>
+        </ul>
+      </div>
+      <div class="floating f1"><span class="dot" style="background:var(--contractor)"></span>Lone Star Builders wants to connect</div>
+      <div class="floating f2"><span class="dot" style="background:var(--engineer)"></span>Structural engineer matched</div>
+    </div>
+  </div>
+
+  <section class="alt" id="who">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>One circle for the whole project team</h2>
+        <p class="muted">Every job needs the right people. On BuildCircle you already know them, or know someone who does.</p>
+      </div>
+      <div class="grid3">
+        <div class="card" style="--c:var(--contractor)">
+          <h3><span class="icon">⛏</span>Contractors &amp; trades</h3>
+          <p class="muted">Win more bids by showing proof, not promises.</p>
+          <ul><li>Post finished jobs with photos</li><li>Show licenses, bonding and insurance</li><li>Get found by architects and owners</li></ul>
+        </div>
+        <div class="card" style="--c:var(--architect)">
+          <h3><span class="icon">✎</span>Architects</h3>
+          <p class="muted">Build a trusted bench of builders and consultants.</p>
+          <ul><li>Share a portfolio that travels with you</li><li>Check a contractor's track record fast</li><li>Bring the team together earlier</li></ul>
+        </div>
+        <div class="card" style="--c:var(--engineer)">
+          <h3><span class="icon">⚙</span>Engineers</h3>
+          <p class="muted">Get brought in on the projects that fit your discipline.</p>
+          <ul><li>List PE licenses by state</li><li>Highlight structural, MEP or civil work</li><li>Connect with firms that need you</li></ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="how">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>How it works</h2>
+        <p class="muted">Set up once, and let your profile do the introductions.</p>
+      </div>
+      <div class="grid3 steps">
+        <div class="card step"><h3>Build your profile</h3><p>Upload your projects, resume, licenses and certifications. Companies and individuals both welcome.</p></div>
+        <div class="card step"><h3>Get verified</h3><p>We check licenses so the people you work with know they're real and current.</p></div>
+        <div class="card step"><h3>Grow your circle</h3><p>Follow firms, share project updates, trade referrals, and search by trade, license and location when you need someone new.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="alt">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>A feed for your work. A network for your next job.</h2>
+      </div>
+      <div class="feat">
+        <div><span class="icon">▦</span><div><b>Project portfolios</b><p>Photos, scope and budget range for every job you're proud of.</p></div></div>
+        <div><span class="icon">✓</span><div><b>License tracking</b><p>State, number and expiry in one place, with a heads-up before renewals.</p></div></div>
+        <div><span class="icon">☰</span><div><b>Resumes and experience</b><p>Years in the field, specialties and past clients, all on your profile.</p></div></div>
+        <div><span class="icon">★</span><div><b>Reviews from real partners</b><p>Hear from the people who actually worked with them.</p></div></div>
+        <div><span class="icon">⌕</span><div><b>Search that speaks construction</b><p>Filter by trade, license type, state, rating and availability.</p></div></div>
+        <div><span class="icon">⇄</span><div><b>Your circle, organized</b><p>Connect with the subs, consultants and firms you trust and keep them a tap away.</p></div></div>
+        <div><span class="icon">✦</span><div><b>Project updates feed</b><p>Post progress photos, toppings-out and wins, and see what your connections are building.</p></div></div>
+        <div><span class="icon">✉</span><div><b>Referrals and messages</b><p>Recommend people you trust and reach out directly when a job comes up.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="preview">
+        <div>
+          <h2 style="font-size:1.4rem">Try the early preview</h2>
+          <p>Browse sample profiles, the activity feed, licenses and reviews in our working prototype. The pros listed there are examples, not real businesses.</p>
+        </div>
+        <a class="btn" href="buildcircle/">Open the preview →</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta alt">
+    <div class="wrap">
+      <h2 style="font-size:clamp(1.5rem,3.4vw,2.1rem)">Start your circle early</h2>
+      <p class="muted">Join the waitlist and we'll let you know the moment we open.</p>
+      <form class="waitlist" novalidate>
+        <div class="row">
+          <label class="vh" for="email2">Email</label>
+          <input id="email2" name="email" type="email" placeholder="you@company.com" autocomplete="email" required>
+          <label class="vh" for="role2">I am a…</label>
+          <select id="role2" name="role" required>
+            <option value="" selected disabled>I am a…</option>
+            <option>Contractor</option>
+            <option>Subcontractor / trade</option>
+            <option>Architect</option>
+            <option>Engineer</option>
+            <option>Owner / developer</option>
+            <option>Other</option>
+          </select>
+          <input class="hp" name="company_url" tabindex="-1" autocomplete="off" aria-hidden="true">
+          <button class="btn primary" type="submit">Join the waitlist</button>
+        </div>
+        <p class="err" role="alert"></p>
+        <p class="fine">Free to join. We'll only email you about the launch.</p>
+        <div class="thanks" aria-live="polite">
+          <h3><span class="check">✓</span> You're on the list.</h3>
+          <p class="muted">We'll email you when BuildCircle opens.</p>
+        </div>
+      </form>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© <span id="yr">2026</span> BuildCircle</span>
+    <span><a href="buildcircle/">Preview</a> · <a href="my_website/">Jorge's old site</a></span>
+  </div>
+</footer>
+
+<script>
+// Where sign-ups are sent. Leave empty until a form service (e.g. Formspree or a
+// Google Form) is set up; until then entries are only kept in this browser.
+var WAITLIST_ENDPOINT = "";
+
+document.getElementById("yr").textContent = new Date().getFullYear();
+
+document.querySelectorAll("form.waitlist").forEach(function (form) {
+  var err = form.querySelector(".err");
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var email = form.email.value.trim(), role = form.role.value;
+    err.style.display = "none";
+    if (form.company_url.value) return; // bot trap
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { return showErr("Please enter a valid email address."); }
+    if (!role) { return showErr("Please tell us what you do."); }
+    var entry = { email: email, role: role, at: new Date().toISOString() };
+    var btn = form.querySelector("button"); btn.disabled = true;
+
+    function finish() {
+      try {
+        var list = JSON.parse(localStorage.getItem("buildcircle_waitlist") || "[]");
+        list.push(entry); localStorage.setItem("buildcircle_waitlist", JSON.stringify(list));
+      } catch (_) {}
+      form.classList.add("done");
+    }
+    if (!WAITLIST_ENDPOINT) { finish(); return; }
+    fetch(WAITLIST_ENDPOINT, { method: "POST", headers: { "Content-Type": "application/json", "Accept": "application/json" }, body: JSON.stringify(entry) })
+      .then(function (r) { if (!r.ok) throw 0; finish(); })
+      .catch(function () { btn.disabled = false; showErr("Something went wrong. Please try again."); });
+  });
+  function showErr(msg) { err.textContent = msg; err.style.display = "block"; }
+});
+</script>
+</body>
+</html>
