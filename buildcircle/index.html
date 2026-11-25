@@ -18,9 +18,11 @@
       <button class="tab active" data-view="browse">Directory</button>
       <button class="tab" data-view="feed">Activity</button>
       <button class="tab" data-view="network">My network <span id="netCount" class="pill">0</span></button>
+      <button class="tab" data-view="pricing">Pricing</button>
     </nav>
     <div class="me">
       <span id="meLabel" class="muted"></span>
+      <button class="plan-badge" id="planBadge" data-view="pricing" title="Your plan">Free</button>
       <button class="btn primary" id="joinBtn">Join as a pro</button>
     </div>
   </div>
@@ -44,10 +46,10 @@
         <label>Specialty
           <select id="fSub"><option value="">Any</option></select>
         </label>
-        <label>License state
+        <label><span>License state <span class="pro-tag" data-pro-only>PRO</span></span>
           <select id="fState"><option value="">Any</option></select>
         </label>
-        <label>License type
+        <label><span>License type <span class="pro-tag" data-pro-only>PRO</span></span>
           <select id="fLicType"><option value="">Any</option></select>
         </label>
         <label><span>Min. experience: <b id="fExpVal">0</b> yrs</span>
@@ -93,6 +95,20 @@
     <p class="muted">Pros you've connected with. Connect from any profile.</p>
     <div id="networkGrid" class="grid"></div>
   </section>
+
+  <!-- PRICING -->
+  <section id="view-pricing" class="view hidden">
+    <div class="pricing-head">
+      <h2>Plans for every builder</h2>
+      <p class="muted">Start free. Try Pro free for 14 days to read reviews, see contact info and check license details before you hire or partner.</p>
+      <div class="cycle" role="radiogroup" aria-label="Billing cycle">
+        <button class="cycle-btn" data-cycle="monthly">Monthly</button>
+        <button class="cycle-btn" data-cycle="annual">Annual <span class="save" id="savePct"></span></button>
+      </div>
+    </div>
+    <div id="plans" class="plans"></div>
+    <div id="compare" class="compare"></div>
+  </section>
 </main>
 
 <!-- PROFILE DIALOG -->
@@ -122,6 +138,12 @@
     </div>
     <label>Headline<input name="headline" maxlength="90" placeholder="Licensed GC specializing in custom homes"></label>
     <label>About<textarea name="bio" rows="3" maxlength="600"></textarea></label>
+    <div class="row2">
+      <label>Phone<input name="phone" type="tel" maxlength="30" placeholder="(555) 555-0100"></label>
+      <label>Email<input name="email" type="email" maxlength="80" placeholder="you@company.com"></label>
+    </div>
+    <label>Website<input name="website" maxlength="100" placeholder="yourcompany.com"></label>
+    <p class="muted hint">Contact info is visible to Pro members only.</p>
     <label>Skills / tags (comma separated)<input name="tags" maxlength="200" placeholder="LEED, Revit, Seismic retrofit"></label>
 
     <fieldset>
@@ -136,6 +158,11 @@
       <button type="submit" class="btn primary" value="ok">Publish profile</button>
     </div>
   </form>
+</dialog>
+
+<!-- CHECKOUT / MANAGE PLAN DIALOG -->
+<dialog id="checkoutDlg" class="dlg">
+  <div id="checkoutBody" class="pbody"></div>
 </dialog>
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
