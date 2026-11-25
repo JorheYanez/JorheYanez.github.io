@@ -106,6 +106,28 @@ window.BC_SEED = (function () {
       connections: 267, joined: d(950) }
   ];
 
+  /* Fictional contact details: 555-01xx numbers and reserved .example domains. */
+  const contacts = {
+    p1: ["(512) 555-0142", "hello@delgadobuilders.example", "delgadobuilders.example"],
+    p2: ["(503) 555-0118", "kenji@watanabe-arch.example", "watanabe-arch.example"],
+    p3: ["(415) 555-0177", "priya@ramanstructural.example", "ramanstructural.example"],
+    p4: ["(303) 555-0131", "service@brightline.example", "brightline.example"],
+    p5: ["(602) 555-0164", "ana@ortizla.example", "ortizla.example"],
+    p6: ["(312) 555-0109", "tom@brennanplumbing.example", "brennanplumbing.example"],
+    p7: ["(404) 555-0156", "grace@okaforcivil.example", "okaforcivil.example"],
+    p8: ["(704) 555-0190", "estimates@summitroofing.example", "summitroofing.example"],
+    p9: ["(305) 555-0123", "luis@morenomep.example", "morenomep.example"],
+    p10: ["(612) 555-0185", "studio@halvorsen.example", "halvorsen.example"],
+    p11: ["(480) 555-0147", "book@coolairhvac.example", "coolairhvac.example"],
+    p12: ["(206) 555-0138", "hannah@schultzgeo.example", "schultzgeo.example"],
+    p13: ["(615) 555-0172", "shop@ironwood.example", "ironwood.example"],
+    p14: ["(212) 555-0161", "rebecca@lininteriors.example", "lininteriors.example"]
+  };
+  pros.forEach((p) => {
+    const c = contacts[p.id];
+    p.contact = { phone: c[0], email: c[1], website: c[2] };
+  });
+
   const R = (id, proId, author, role, rating, project, text, days, helpful) =>
     ({ id, proId, author, role, rating, project, text, date: d(days), helpful: helpful || 0 });
   const reviews = [
@@ -135,3 +157,34 @@ window.BC_SEED = (function () {
   ];
   return { pros, reviews };
 })();
+
+/* Membership plans. Prices are placeholders; no payment is processed in this demo. */
+window.BC_PLANS = {
+  free: {
+    name: "Free",
+    tagline: "Find and connect with pros",
+    features: [
+      "Browse the full directory",
+      "Filter by category, specialty, experience & rating",
+      "See star ratings and review counts",
+      "Create your own pro profile",
+      "Connect with other pros",
+      "Write reviews"
+    ]
+  },
+  pro: {
+    name: "Pro",
+    tagline: "Hire and partner with confidence",
+    monthly: 19,
+    annual: 190,
+    features: [
+      "Everything in Free, plus:",
+      "Read every review of other businesses",
+      "Contact info: phone, email & website",
+      "Full license details: numbers, states, expiry & verification status",
+      "Filter by license state and license type",
+      "Search by license number",
+      "Pro badge on your profile"
+    ]
+  }
+};

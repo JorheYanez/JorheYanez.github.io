@@ -10,15 +10,43 @@
   function load() {
     try {
       const raw = localStorage.getItem(KEY);
-      if (raw) return JSON.parse(raw);
+      if (raw) return migrate(JSON.parse(raw));
     } catch (e) { /* storage unavailable */ }
     const seed = JSON.parse(JSON.stringify(window.BC_SEED));
-    return { pros: seed.pros, reviews: seed.reviews, myId: null, network: [], helpfulVotes: [], events: [] };
+    return migrate({ pros: seed.pros, reviews: seed.reviews, myId: null, network: [], helpfulVotes: [], events: [] });
+  }
+  /* Fill in fields added after a visitor's data was first saved. */
+  function migrate(d) {
+    d.plan = d.plan === "pro" ? "pro" : "free";
+    d.billing = d.billing || null;
+    d.pros.forEach((p) => {
+      if (!p.contact) {
+        const s = window.BC_SEED.pros.find((x) => x.id === p.id);
+        p.contact = s ? { ...s.contact } : {};
+      }
+    });
+    return d;
   }
   let db = load();
   function save() { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) { /* ignore */ } }
 
-  const ui = { cat: "", q: "", sub: "", state: "", licType: "", exp: 0, rating: 0, verified: false, avail: false, sort: "rating", view: "browse" };
+  const ui = { cat: "", q: "", sub: "", state: "", licType: "", exp: 0, rating: 0, verified: false, avail: false, sort: "rating", view: "browse", cycle: "monthly" };
+
+  /* ---------- membership ---------- */
+  const PLANS = window.BC_PLANS;
+  const isPro = () => db.plan === "pro";
+  /* Pro members see everything; everyone always sees their own profile in full. */
+  const canSee = (p) => isPro() || p.id === db.myId;
+  const LOCK = '<svg class="lock-ic" viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path fill="currentColor" d="M4 7V5a4 4 0 1 1 8 0v2h.5A1.5 1.5 0 0 1 14 8.5v5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5v-5A1.5 1.5 0 0 1 3.5 7H4Zm2 0h4V5a2 2 0 1 0-4 0v2Z"/></svg>';
+  function lockedBox(title, text, reason) {
+    return `<div class="locked">
+      <div class="locked-title">${LOCK} ${esc(title)}</div>
+      <p class="muted">${esc(text)}</p>
+      <button class="btn primary small" data-upgrade="${esc(reason)}">Unlock with Pro</button>
+    </div>`;
+  }
+  const money = (n) => "$" + n.toLocaleString("en-US");
+  const fmtDate = (iso) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
   /* ---------- derived ---------- */
   const reviewsFor = (id) => db.reviews.filter((r) => r.proId === id).sort((a, b) => b.date.localeCompare(a.date));
@@ -85,7 +113,8 @@
       if (ui.avail && !p.available) return false;
       if (ui.rating && stats(p.id).avg < ui.rating) return false;
       if (q) {
-        const hay = [p.name, p.sub, p.category, p.location, p.headline, p.bio, ...(p.tags || []), ...p.licenses.map((l) => l.type + " " + l.number)].join(" ").toLowerCase();
+        const hay = [p.name, p.sub, p.category, p.location, p.headline, p.bio, ...(p.tags || []),
+          ...(canSee(p) ? p.licenses.map((l) => l.type + " " + l.number + " " + l.state) : [])].join(" ").toLowerCase();
         if (!q.split(/\s+/).every((t) => hay.includes(t))) return false;
       }
       return true;
@@ -122,7 +151,10 @@
       <div class="tags">
         ${verified ? '<span class="badge ok">✔ Verified license</span>' : '<span class="badge warn">License unverified</span>'}
         ${p.available ? '<span class="badge avail">Accepting projects</span>' : ""}
-        ${p.licenses.slice(0, 2).map((l) => `<span class="tag">${esc(l.type)} · ${esc(l.state)}</span>`).join("")}
+        ${canSee(p)
+          ? p.licenses.slice(0, 2).map((l) => `<span class="tag">${esc(l.type)} · ${esc(l.state)}</span>`).join("")
+          : `<span class="tag lock-tag">${LOCK} ${p.licenses.length} license${p.licenses.length === 1 ? "" : "s"} on file</span>`}
+        ${p.id === db.myId && isPro() ? '<span class="badge pro">PRO</span>' : ""}
       </div>
       <div class="card-foot">
         <span class="muted" style="font-size:.8rem">${connCount(p)} connections</span>
@@ -153,7 +185,7 @@
         const p = proById(it.r.proId); if (!p) return "";
         return `<div class="feed-item"><div class="avatar" style="--cat:${catColor(p.category)}">${esc(initials(it.r.author))}</div><div>
           <div><b>${esc(it.r.author)}</b> <span class="muted">(${esc(it.r.role)})</span> reviewed <a data-open="${p.id}">${esc(p.name)}</a> <span class="stars">${starStr(it.r.rating)}</span></div>
-          <div>“${esc(it.r.text)}”</div><time>${ago(it.date)} · ${esc(it.r.project)}</time></div></div>`;
+          ${canSee(p) ? `<div>“${esc(it.r.text)}”</div>` : `<div class="muted">${LOCK} <button class="linkbtn" data-upgrade="Reading reviews of other businesses">Upgrade to Pro</button> to read this review</div>`}<time>${ago(it.date)} · ${esc(it.r.project)}</time></div></div>`;
       }
       if (it.kind === "join") {
         const p = it.p;
@@ -170,9 +202,22 @@
   }
 
   /* ---------- profile ---------- */
+  function contactHTML(c) {
+    const rows = [];
+    if (c.phone) rows.push(`<div class="contact-row"><span>📞</span><a href="tel:${esc(c.phone.replace(/[^\d+]/g, ""))}">${esc(c.phone)}</a></div>`);
+    if (c.email) rows.push(`<div class="contact-row"><span>✉️</span><a href="mailto:${esc(c.email)}">${esc(c.email)}</a></div>`);
+    if (c.website) {
+      const host = c.website.replace(/^[a-z][a-z0-9+.-]*:\/*/i, "");
+      rows.push(`<div class="contact-row"><span>🌐</span><a href="https://${esc(host)}" target="_blank" rel="noopener noreferrer">${esc(host)}</a></div>`);
+    }
+    return rows.length ? `<div class="contact">${rows.join("")}</div>` : '<span class="muted">No contact info listed.</span>';
+  }
+
   let draftRating = 0;
+  let currentProfile = null;
   function openProfile(id) {
     const p = proById(id); if (!p) return;
+    currentProfile = id;
     const s = stats(id);
     const rs = reviewsFor(id);
     const connected = db.network.includes(id);
@@ -183,7 +228,7 @@
         <button class="x close" data-close aria-label="Close">×</button>
         <div class="avatar lg">${esc(initials(p.name))}</div>
         <div>
-          <h2>${esc(p.name)}</h2>
+          <h2>${esc(p.name)} ${mine && isPro() ? '<span class="badge pro">PRO</span>' : ""}</h2>
           <div class="sub">${esc(p.category)} · ${esc(p.sub)}</div>
           <div class="muted">${esc(p.headline || "")}</div>
           <div class="p-actions">
@@ -210,9 +255,17 @@
           </div>
           <div class="box">
             <h4>Licenses & certifications</h4>
-            ${p.licenses.length ? p.licenses.map((l) => `<div class="lic"><div><b>${esc(l.type)}</b><br><span class="muted">#${esc(l.number)} · ${esc(l.state)} · exp. ${esc(l.expires || "n/a")}</span></div>
-              <div>${isExpired(l) ? '<span class="badge warn">Expired</span>' : l.verified ? '<span class="badge ok">✔ Verified</span>' : '<span class="badge warn">Pending</span>'}</div></div>`).join("") : '<span class="muted">No licenses listed.</span>'}
+            ${!p.licenses.length ? '<span class="muted">No licenses listed.</span>'
+              : canSee(p) ? p.licenses.map((l) => `<div class="lic"><div><b>${esc(l.type)}</b><br><span class="muted">#${esc(l.number)} · ${esc(l.state)} · exp. ${esc(l.expires || "n/a")}</span></div>
+              <div>${isExpired(l) ? '<span class="badge warn">Expired</span>' : l.verified ? '<span class="badge ok">✔ Verified</span>' : '<span class="badge warn">Pending</span>'}</div></div>`).join("")
+              : lockedBox(`${p.licenses.length} license${p.licenses.length === 1 ? "" : "s"} on file`,
+                  "See license numbers, issuing states, expiry dates and verification status.", "Full license details")}
           </div>
+        </div>
+        <div class="box">
+          <h4>Contact</h4>
+          ${canSee(p) ? contactHTML(p.contact || {})
+            : lockedBox("Contact info is for Pro members", "See their phone number, email address and website.", "Contact information")}
         </div>
         <div class="box">
           <h4>Rating breakdown</h4>
@@ -233,7 +286,11 @@
 
         <div>
           <h3>Reviews (${s.n})</h3>
-          ${rs.length ? rs.map((r) => `<div class="review">
+          ${rs.length && !canSee(p) ? `<div class="review-lock">
+              ${[0, 1].map(() => `<div class="review ghost-review" aria-hidden="true"><div class="ghost-line w40"></div><div class="ghost-line w20"></div><div class="ghost-line w90"></div><div class="ghost-line w70"></div></div>`).join("")}
+              ${lockedBox(`${s.n} review${s.n === 1 ? "" : "s"} from clients and pros`, "Read what homeowners, developers and other pros say about working with them.", "Reading reviews of other businesses")}
+            </div>`
+          : rs.length ? rs.map((r) => `<div class="review">
             <div class="review-head"><span><b>${esc(r.author)}</b> <span class="muted">· ${esc(r.role)} · ${esc(r.project)}</span></span><span class="muted">${ago(r.date)}</span></div>
             <div class="stars">${starStr(r.rating)}</div>
             <p>${esc(r.text)}</p>
@@ -293,13 +350,140 @@
       const p = {
         id: "u" + Date.now(), name: f.get("name").trim(), category: f.get("category"), sub: f.get("sub"), location: f.get("location").trim(),
         years: +f.get("years") || 0, rate: +f.get("rate") || null, available: !!f.get("available"), headline: f.get("headline").trim(),
-        bio: f.get("bio").trim(), tags: f.get("tags").split(",").map((t) => t.trim()).filter(Boolean), licenses, connections: 0, joined: new Date().toISOString()
+        bio: f.get("bio").trim(),
+        contact: { phone: f.get("phone").trim(), email: f.get("email").trim(), website: f.get("website").trim() },
+        tags: f.get("tags").split(",").map((t) => t.trim()).filter(Boolean), licenses, connections: 0, joined: new Date().toISOString()
       };
       db.pros.push(p); db.myId = p.id; save();
       $("#joinDlg").close(); e.target.reset(); syncSubs();
       rerender(); openProfile(p.id);
       toast("Profile published! Licenses show as pending until verified.");
     });
+  }
+
+  /* ---------- pricing & plans ---------- */
+  const proPrice = (cycle) => (cycle === "annual" ? PLANS.pro.annual : PLANS.pro.monthly);
+  const perLabel = (cycle) => (cycle === "annual" ? "/year" : "/month");
+  function renderPricing() {
+    $$(".cycle-btn").forEach((b) => {
+      const on = b.dataset.cycle === ui.cycle;
+      b.classList.toggle("on", on); b.setAttribute("aria-checked", on); b.setAttribute("role", "radio");
+    });
+    const feats = (list) => `<ul class="feats">${list.map((f, i) =>
+      `<li class="${f.endsWith(":") ? "lead" : ""}">${f.endsWith(":") && i === 0 ? "" : '<span class="ck">✓</span>'}${esc(f)}</li>`).join("")}</ul>`;
+    const pro = PLANS.pro, free = PLANS.free;
+    const monthlyEquiv = (pro.annual / 12).toFixed(2);
+    $("#plans").innerHTML = `
+      <div class="plan ${!isPro() ? "current" : ""}">
+        <div class="plan-name">${free.name}</div>
+        <div class="muted">${esc(free.tagline)}</div>
+        <div class="price"><b>$0</b><span>forever</span></div>
+        ${isPro() ? '<button class="btn" data-downgrade>Switch to Free</button>' : '<button class="btn" disabled>Your current plan</button>'}
+        ${feats(free.features)}
+      </div>
+      <div class="plan featured ${isPro() ? "current" : ""}">
+        <div class="ribbon">Most popular</div>
+        <div class="plan-name">${pro.name}</div>
+        <div class="muted">${esc(pro.tagline)}</div>
+        <div class="price"><b>${money(proPrice(ui.cycle))}</b><span>${perLabel(ui.cycle)}</span></div>
+        <div class="muted small-note">${ui.cycle === "annual" ? `That's $${monthlyEquiv}/month, billed yearly` : `Or ${money(pro.annual)}/year — 2 months free`}</div>
+        ${isPro() ? '<button class="btn primary" data-manage>Manage plan</button>' : '<button class="btn primary" data-upgrade="">Upgrade to Pro</button>'}
+        ${feats(pro.features)}
+      </div>`;
+    const rows = [
+      ["Browse the directory", true, true],
+      ["Filter by category, specialty, experience & rating", true, true],
+      ["Star ratings & review counts", true, true],
+      ["Create a profile, connect & write reviews", true, true],
+      ["Read reviews of other businesses", false, true],
+      ["Contact info (phone, email, website)", false, true],
+      ["License numbers, states, expiry & verification", false, true],
+      ["Filter by license state & type", false, true],
+      ["Search by license number", false, true],
+      ["Pro badge on your profile", false, true]
+    ];
+    const cell = (v) => (v ? '<span class="ck">✓</span>' : '<span class="muted">—</span>');
+    $("#compare").innerHTML = `<h3>Compare plans</h3><table><thead><tr><th>Feature</th><th>Free</th><th>Pro</th></tr></thead>
+      <tbody>${rows.map((r) => `<tr><td>${esc(r[0])}</td><td>${cell(r[1])}</td><td>${cell(r[2])}</td></tr>`).join("")}</tbody></table>`;
+  }
+
+  /* Upgrade (checkout) dialog. `reason` names the feature that prompted it. */
+  function openCheckout(reason) {
+    if (isPro()) return openManage();
+    let cycle = ui.cycle;
+    const body = $("#checkoutBody");
+    const paint = () => {
+      body.innerHTML = `
+        <button class="x close" data-close aria-label="Close">×</button>
+        <div class="plan-name">Upgrade to BuildCircle Pro</div>
+        ${reason ? `<p class="reason">${LOCK} ${esc(reason)} is a Pro feature.</p>` : ""}
+        <div class="cycle-pick" role="radiogroup" aria-label="Billing cycle">
+          ${["monthly", "annual"].map((c) => `<label class="cycle-opt ${cycle === c ? "on" : ""}">
+            <input type="radio" name="cyc" value="${c}" ${cycle === c ? "checked" : ""}>
+            <span><b>${c === "annual" ? "Annual" : "Monthly"}</b><br><span class="muted">${money(proPrice(c))}${perLabel(c)}${c === "annual" ? " · save 17%" : ""}</span></span>
+          </label>`).join("")}
+        </div>
+        <ul class="feats">${PLANS.pro.features.slice(1).map((f) => `<li><span class="ck">✓</span>${esc(f)}</li>`).join("")}</ul>
+        <div class="summary"><span>Due today</span><b>${money(proPrice(cycle))}</b></div>
+        <p class="demo-note">Demo checkout — no payment is collected and no card is needed. Cancel any time from <i>Manage plan</i>.</p>
+        <div class="dlg-actions">
+          <button class="btn ghost" data-close>Not now</button>
+          <button class="btn primary" id="confirmPro">Start Pro</button>
+        </div>`;
+      $$("input[name=cyc]", body).forEach((r) => r.addEventListener("change", () => { cycle = r.value; paint(); }));
+      $("#confirmPro", body).addEventListener("click", () => {
+        db.plan = "pro";
+        db.billing = { cycle, since: new Date().toISOString(), price: proPrice(cycle) };
+        save();
+        $("#checkoutDlg").close();
+        afterPlanChange();
+        toast("Welcome to Pro! Reviews, contact info and license details are unlocked.");
+      });
+    };
+    paint();
+    const dlg = $("#checkoutDlg");
+    if (!dlg.open) dlg.showModal();
+  }
+
+  function renewalDate(b) {
+    const d = new Date(b.since);
+    const now = new Date();
+    while (d <= now) b.cycle === "annual" ? d.setFullYear(d.getFullYear() + 1) : d.setMonth(d.getMonth() + 1);
+    return d.toISOString();
+  }
+  function openManage() {
+    const b = db.billing || { cycle: "monthly", since: new Date().toISOString(), price: PLANS.pro.monthly };
+    const other = b.cycle === "annual" ? "monthly" : "annual";
+    $("#checkoutBody").innerHTML = `
+      <button class="x close" data-close aria-label="Close">×</button>
+      <div class="plan-name">Your plan: Pro <span class="badge pro">PRO</span></div>
+      <div class="manage-grid">
+        <div><span class="muted">Billing</span><b>${money(proPrice(b.cycle))}${perLabel(b.cycle)}</b></div>
+        <div><span class="muted">Member since</span><b>${fmtDate(b.since)}</b></div>
+        <div><span class="muted">Renews</span><b>${fmtDate(renewalDate(b))}</b></div>
+      </div>
+      <p class="demo-note">Demo billing — nothing is charged.</p>
+      <div class="dlg-actions">
+        <button class="btn" data-switch="${other}">Switch to ${other} (${money(proPrice(other))}${perLabel(other)})</button>
+        <button class="btn danger" data-downgrade>Cancel Pro</button>
+      </div>`;
+    const dlg = $("#checkoutDlg");
+    if (!dlg.open) dlg.showModal();
+  }
+  function downgrade() {
+    if (!confirm("Cancel Pro and switch to the Free plan? Reviews, contact info and license details will be locked again.")) return;
+    db.plan = "free"; db.billing = null; save();
+    if ($("#checkoutDlg").open) $("#checkoutDlg").close();
+    afterPlanChange();
+    toast("You're now on the Free plan.");
+  }
+  function afterPlanChange() {
+    if (!isPro()) {
+      ui.state = ""; ui.licType = "";
+      $("#fState").value = ""; $("#fLicType").value = "";
+    }
+    rerender();
+    if ($("#profileDlg").open && currentProfile) openProfile(currentProfile);
   }
 
   /* ---------- misc ---------- */
@@ -324,6 +508,11 @@
   function rerender() {
     renderChips(); renderGrid(); renderNetwork();
     if (ui.view === "feed") renderFeed();
+    if (ui.view === "pricing") renderPricing();
+    const badge = $("#planBadge");
+    badge.textContent = isPro() ? "PRO" : "Free plan";
+    badge.classList.toggle("is-pro", isPro());
+    $$("[data-pro-only]").forEach((el) => el.classList.toggle("hidden", isPro()));
     $("#meLabel").textContent = me() ? "Signed in as " + me().name : "";
     $("#joinBtn").textContent = me() ? "My profile" : "Join as a pro";
   }
@@ -331,6 +520,16 @@
   /* ---------- events ---------- */
   document.addEventListener("click", (e) => {
     const t = e.target;
+    const up = t.closest("[data-upgrade]"); if (up) { e.preventDefault(); return openCheckout(up.dataset.upgrade); }
+    if (t.closest("[data-manage]")) return openManage();
+    if (t.closest("[data-downgrade]")) return downgrade();
+    const sw = t.closest("[data-switch]");
+    if (sw) {
+      db.billing = { ...db.billing, cycle: sw.dataset.switch, price: proPrice(sw.dataset.switch) };
+      save(); openManage(); rerender();
+      return toast("Billing switched to " + sw.dataset.switch);
+    }
+    const cy = t.closest("[data-cycle]"); if (cy) { ui.cycle = cy.dataset.cycle; return renderPricing(); }
     const c = t.closest("[data-connect]"); if (c) { e.stopPropagation(); return toggleConnect(c.dataset.connect); }
     const st = t.closest("[data-star]"); if (st) { draftRating = +st.dataset.star; return paintStars(draftRating); }
     const h = t.closest("[data-helpful]");
@@ -353,8 +552,13 @@
 
   $("#q").addEventListener("input", (e) => { ui.q = e.target.value; renderGrid(); });
   $("#fSub").addEventListener("change", (e) => { ui.sub = e.target.value; renderGrid(); });
-  $("#fState").addEventListener("change", (e) => { ui.state = e.target.value; renderGrid(); });
-  $("#fLicType").addEventListener("change", (e) => { ui.licType = e.target.value; renderGrid(); });
+  /* License filters are Pro-only: Free users get the upgrade prompt instead. */
+  const proFilter = (key, reason) => (e) => {
+    if (!isPro() && e.target.value) { e.target.value = ""; ui[key] = ""; return openCheckout(reason); }
+    ui[key] = e.target.value; renderGrid();
+  };
+  $("#fState").addEventListener("change", proFilter("state", "Filtering by license state"));
+  $("#fLicType").addEventListener("change", proFilter("licType", "Filtering by license type"));
   $("#fExp").addEventListener("input", (e) => { ui.exp = +e.target.value; $("#fExpVal").textContent = ui.exp; renderGrid(); });
   $("#fRating").addEventListener("change", (e) => { ui.rating = +e.target.value; renderGrid(); });
   $("#fVerified").addEventListener("change", (e) => { ui.verified = e.target.checked; renderGrid(); });
