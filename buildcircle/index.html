@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BuildCircle</title>
-<meta name="description" content="A social network connecting contractors, architects and engineers — browse by category, licenses and experience, and read or leave reviews.">
+<title>Buildcircle · The professional network for construction</title>
+<meta name="description" content="Buildcircle is the professional network for architects, engineers and contractors. Share your work, licenses and experience, grow your connections, and find the right partners for every project.">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -12,28 +12,28 @@
   <div class="wrap topbar-inner">
     <a class="brand" href="#" data-view="browse">
       <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="3"/><path d="M9 20 L16 9 L23 20 Z" fill="currentColor"/></svg>
-      BuildCircle
+      Buildcircle
     </a>
     <nav class="tabs" role="tablist">
-      <button class="tab active" data-view="browse">Directory</button>
-      <button class="tab" data-view="feed">Activity</button>
+      <button class="tab active" data-view="browse">Discover</button>
+      <button class="tab" data-view="feed">Feed</button>
       <button class="tab" data-view="network">My network <span id="netCount" class="pill">0</span></button>
       <button class="tab" data-view="pricing">Pricing</button>
     </nav>
     <div class="me">
       <span id="meLabel" class="muted"></span>
       <button class="plan-badge" id="planBadge" data-view="pricing" title="Your plan">Free</button>
-      <button class="btn primary" id="joinBtn">Join as a pro</button>
+      <button class="btn primary" id="joinBtn">Join Buildcircle</button>
     </div>
   </div>
 </header>
 
 <main class="wrap">
-  <!-- DIRECTORY -->
+  <!-- DISCOVER -->
   <section id="view-browse" class="view">
     <div class="hero">
-      <h1>Find the right builder, designer or engineer.</h1>
-      <p class="muted">Verified licenses, real experience, and reviews from people who worked with them.</p>
+      <h1>The professional network for people who build.</h1>
+      <p class="muted">Connect with architects, engineers and contractors. Share your work, show your licenses and experience, and find the right partners for your next project.</p>
       <div class="search">
         <input id="q" type="search" placeholder="Search name, specialty, city, license #…" aria-label="Search">
       </div>
@@ -85,14 +85,14 @@
 
   <!-- FEED -->
   <section id="view-feed" class="view hidden">
-    <h2>Recent activity</h2>
+    <h2>What your circle is up to</h2>
     <div id="feed" class="feed"></div>
   </section>
 
   <!-- NETWORK -->
   <section id="view-network" class="view hidden">
     <h2>My network</h2>
-    <p class="muted">Pros you've connected with. Connect from any profile.</p>
+    <p class="muted">The architects, engineers and contractors in your circle. Connect from any profile to grow it.</p>
     <div id="networkGrid" class="grid"></div>
   </section>
 
@@ -119,7 +119,8 @@
 <!-- JOIN DIALOG -->
 <dialog id="joinDlg" class="dlg">
   <form id="joinForm" method="dialog">
-    <h2>Create your pro profile</h2>
+    <h2>Join Buildcircle</h2>
+    <p class="muted hint">Create your professional profile to share your work, licenses and experience with the network.</p>
     <div class="row2">
       <label>Full name / company<input name="name" required maxlength="60"></label>
       <label>City, State<input name="location" required maxlength="60" placeholder="Austin, TX"></label>
