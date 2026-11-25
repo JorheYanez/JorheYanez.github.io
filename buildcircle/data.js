@@ -193,3 +193,13 @@ window.BC_PLANS = {
     ]
   }
 };
+
+/* Stripe Payment Links. These are public checkout URLs, safe to publish:
+   no secret keys belong in this file. Leave the links blank to use the
+   built-in demo checkout instead. */
+window.BC_STRIPE = {
+  mode: "test",      // "test" or "live": test mode shows the test-card hint
+  monthlyLink: "",   // Payment Link for Pro, $9.99/month, 14-day trial
+  annualLink: "",    // Payment Link for Pro, $99/year, 14-day trial
+  portalLink: ""     // Customer portal login link (manage billing / cancel)
+};

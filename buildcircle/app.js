@@ -371,6 +371,40 @@
   const trialAvailable = () => !db.usedTrial && PLANS.pro.trialDays > 0;
   const addDays = (iso, n) => new Date(new Date(iso).getTime() + n * 864e5).toISOString();
   const inTrial = (b) => b && b.trialEnds && new Date(b.trialEnds) > new Date();
+
+  /* ---------- Stripe Payment Links ---------- */
+  const STRIPE = window.BC_STRIPE || {};
+  /* Real checkout only when both Payment Links are configured; otherwise the demo checkout. */
+  const stripeOn = () => /^https:\/\/(buy|checkout)\.stripe\.com\//.test(STRIPE.monthlyLink || "") && /^https:\/\/(buy|checkout)\.stripe\.com\//.test(STRIPE.annualLink || "");
+  const portalOn = () => /^https:\/\/billing\.stripe\.com\//.test(STRIPE.portalLink || "");
+  const isStripeBilling = () => db.billing && db.billing.provider === "stripe";
+  function visitorId() {
+    if (!db.visitorId) { db.visitorId = "v_" + Math.random().toString(36).slice(2, 12) + Date.now().toString(36); save(); }
+    return db.visitorId;
+  }
+  function goToStripe(cycle) {
+    const url = new URL(cycle === "annual" ? STRIPE.annualLink : STRIPE.monthlyLink);
+    url.searchParams.set("client_reference_id", visitorId());
+    db.pendingCheckout = { cycle, at: new Date().toISOString() }; save();
+    window.location.href = url.toString();
+  }
+  /* Stripe sends buyers back to ?checkout=success&plan=...&session_id=...
+     A static site can't verify the session with Stripe (that needs a secret key on a
+     server), so this trusts the redirect. Fine for testing demand; add a backend before
+     relying on it to protect paid content. */
+  function handleStripeReturn() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("checkout") !== "success") return;
+    const cycle = params.get("plan") === "annual" ? "annual" : "monthly";
+    const now = new Date().toISOString();
+    const days = PLANS.pro.trialDays;
+    db.plan = "pro";
+    db.billing = { provider: "stripe", cycle, since: now, price: proPrice(cycle), trialEnds: days ? addDays(now, days) : null,
+      sessionId: (params.get("session_id") || "").slice(0, 200) };
+    db.usedTrial = true; db.pendingCheckout = null; save();
+    history.replaceState(null, "", window.location.pathname + window.location.hash);
+    setTimeout(() => toast(days ? `You're on Pro! Your ${days}-day free trial has started.` : "Payment confirmed. Welcome to Pro!"), 300);
+  }
   function renderPricing() {
     $$(".cycle-btn").forEach((b) => {
       const on = b.dataset.cycle === ui.cycle;
@@ -439,13 +473,16 @@
         <ul class="feats">${PLANS.pro.features.slice(1).map((f) => `<li><span class="ck">✓</span>${esc(f)}</li>`).join("")}</ul>
         <div class="summary"><span>Due today</span><b>${trial ? "$0" : money(proPrice(cycle))}</b></div>
         ${trial ? `<p class="muted then">Then ${money(proPrice(cycle))}${perLabel(cycle)} starting ${firstCharge}. Cancel before then and you won't be charged.</p>` : ""}
-        <p class="demo-note">Demo checkout — no payment is collected and no card is needed. Cancel any time from <i>Manage plan</i>.</p>
+        ${stripeOn()
+          ? `<p class="demo-note">🔒 You'll finish on Stripe's secure checkout. A card is needed to start${trial ? " the trial, but nothing is charged until it ends" : ""}.${STRIPE.mode === "test" ? " <b>Test mode:</b> use card 4242 4242 4242 4242, any future date and any CVC." : ""}</p>`
+          : `<p class="demo-note">Demo checkout — no payment is collected and no card is needed. Cancel any time from <i>Manage plan</i>.</p>`}
         <div class="dlg-actions">
           <button class="btn ghost" data-close>Not now</button>
-          <button class="btn primary" id="confirmPro">${trial ? `Start ${days}-day free trial` : "Start Pro"}</button>
+          <button class="btn primary" id="confirmPro">${stripeOn() ? "Continue to secure checkout" : trial ? `Start ${days}-day free trial` : "Start Pro"}</button>
         </div>`;
       $$("input[name=cyc]", body).forEach((r) => r.addEventListener("change", () => { cycle = r.value; paint(); }));
       $("#confirmPro", body).addEventListener("click", () => {
+        if (stripeOn()) return goToStripe(cycle);
         const now = new Date().toISOString();
         db.plan = "pro";
         db.billing = { cycle, since: now, price: proPrice(cycle), trialEnds: trial ? addDays(now, days) : null };
@@ -482,16 +519,25 @@
           : `<div><span class="muted">Member since</span><b>${fmtDate(b.since)}</b></div>
              <div><span class="muted">Renews</span><b>${fmtDate(renewalDate(b))}</b></div>`}
       </div>
-      <p class="demo-note">Demo billing — nothing is charged.</p>
-      <div class="dlg-actions">
-        <button class="btn" data-switch="${other}">Switch to ${other} (${money(proPrice(other))}${perLabel(other)})</button>
-        <button class="btn danger" data-downgrade>Cancel Pro</button>
-      </div>`;
+      ${isStripeBilling()
+        ? `<p class="demo-note">Billing is handled by Stripe. Update your card, switch between monthly and annual, see invoices or cancel there.</p>
+           <div class="dlg-actions">
+             <button class="btn ghost" data-downgrade>Switch this browser to Free</button>
+             ${portalOn() ? `<a class="btn primary" href="${esc(STRIPE.portalLink)}" target="_blank" rel="noopener noreferrer">Manage billing on Stripe</a>` : ""}
+           </div>`
+        : `<p class="demo-note">Demo billing — nothing is charged.</p>
+           <div class="dlg-actions">
+             <button class="btn" data-switch="${other}">Switch to ${other} (${money(proPrice(other))}${perLabel(other)})</button>
+             <button class="btn danger" data-downgrade>Cancel Pro</button>
+           </div>`}`;
     const dlg = $("#checkoutDlg");
     if (!dlg.open) dlg.showModal();
   }
   function downgrade() {
-    if (!confirm("Cancel Pro and switch to the Free plan? Reviews, contact info and license details will be locked again.")) return;
+    const msg = isStripeBilling()
+      ? "Switch this browser back to Free? This doesn't cancel your Stripe subscription: to stop being charged, use \"Manage billing on Stripe\" first."
+      : "Cancel Pro and switch to the Free plan? Reviews, contact info and license details will be locked again.";
+    if (!confirm(msg)) return;
     db.plan = "free"; db.billing = null; save();
     if ($("#checkoutDlg").open) $("#checkoutDlg").close();
     afterPlanChange();
@@ -596,6 +642,7 @@
     db = load(); rerender(); toast("Demo data reset");
   });
 
+  handleStripeReturn();
   setupJoin();
   refreshFilterOptions();
   rerender();
